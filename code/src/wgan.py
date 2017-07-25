@@ -48,9 +48,12 @@ class WGAN:
         ##################################################################
         """
 
-        self.fake_image = None
-        self.c_cost = None
-        self.g_cost = None
+        self.fake_image = self.generator(self.z)
+        self.c_real = self.critic(self.real_image)
+        self.c_fake = self.critic(self.fake_image, reuse=True)
+
+        self.g_cost = tf.reduce_mean(self.c_fake)
+        self.c_cost = tf.reduce_mean(self.c_real - self.c_fake) 
 
         """   
         ##################################################################
@@ -87,9 +90,15 @@ class WGAN:
         ##################################################################
         """
 
-        self.c_optimizer = None
-        self.g_optimizer = None
+        self.c_optimizer = optimizer.minimize(
+                -(self.c_cost), 
+                var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='Critic')
+        )
+        self.g_optimizer = optimizer.minimize(
+                self.g_cost, 
+                var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='Generator')
 
+        )
         """   
         ##################################################################
         
@@ -161,7 +170,24 @@ class WGAN:
         ##################################################################
         """
 
-        pass
+        for _ in range(5):
+            data_batch = self.dataset.next_batch_real(batch_size)
+            z = self.dataset.next_batch_fake(batch_size, self.z_size)
+            eta = np.random.rand(batch_size, 1, 1, 1)
+            sess.run(self.c_optimizer, feed_dict={
+                self.z: z,
+                self.eta: eta,
+                self.real_image: data_batch
+            }
+
+        data_batch = self.dataset.next_batch_real(batch_size)
+        z = self.dataset.next_batch_fake(batch_size, self.z_size)
+        eta = np.random.rand(batch_size, 1, 1, 1)
+        sess.run(self.g_optimizer, feed_dict={
+            self.z: z,
+            self.eta: eta,
+            self.real_image: data_batch
+        }
 
         """
         ##################################################################
